@@ -8,8 +8,8 @@ from PIL import Image
 import io
 import google.generativeai as genai
 from PIL import Image
-from reka import ChatMessage
-from reka.client import Reka
+# from reka import ChatMessage
+# from reka.client import Reka
 
 
 

@@ -7,9 +7,13 @@ import tqdm
 import argparse
 import re
 from tqdm import tqdm
+
+import sys
+print(sys.path[0])
+
 from inference.models.closed_source_model import GPT4oInferencer, Claude35Inferencer, GPT4VInference, \
             Gemini15ProInference, GPT4TurboInference, GPT4oMiniInference, GPT35turboInference, GPT4o_0806_Inferencer, GPT4TurboVisionInference, RekaInferencer
-from answer_parsing import parse_multi_choice_response
+from inference.answer_parsing import parse_multi_choice_response
 from multiprocessing import Pool
 
 
