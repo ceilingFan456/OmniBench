@@ -33,3 +33,5 @@ outputs/
 
 # HuggingFace cache (optional)
 .cache/
+
+*.flac
