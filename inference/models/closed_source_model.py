@@ -257,6 +257,8 @@ class Phi4MultimodalLocalInference(BaseInferencer):
         if self.loaded:
             return
         
+        print("Loading Phi-4 Multimodal Local Model...")
+        
         self.loaded = True
         model_path = "microsoft/Phi-4-multimodal-instruct"
 

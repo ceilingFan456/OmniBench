@@ -38,7 +38,7 @@ def parse_multi_choice_response(response, all_choices, index2ans, default_answer
                 candidates.append(choice)
 
     # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
-    if len(candidates) == 0 and len(response.split()) > 2: ## changed to 2 to fix index 12 problem. 
+    if len(candidates) == 0 and len(response.split()) > 0: ## changed to 1 to fix 1_048.png, changed to 0 to fix 6-167.png
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
                 candidates.append(index)
