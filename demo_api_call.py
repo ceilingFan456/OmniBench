@@ -19,9 +19,16 @@ from multiprocessing import Pool
 
 
 def split_string_by_options(input_string):
+    print(f"Splitting options from string: {input_string}")
     pattern = r'(A\..*?)(B\..*?)(C\..*?)(D\..*)'
     matches = re.findall(pattern, input_string, re.DOTALL)
     return [match.strip() for match in matches[0]]
+
+def build_option_string_from_options(options_list):
+    return "\n".join(
+        f"{chr(ord('A') + i)}. {opt.strip()}"
+        for i, opt in enumerate(options_list)
+    )
 
 
 def load_existing_outputs(output_file):
@@ -74,17 +81,26 @@ def create_prompt(args, question, options, audio_transcript, image_caption):
     return prompt
 
 def process_row(args_list):
-
+    # print(f"Processing index: {args_list}")  # Log the index being processed
     row, index, args, index2ans, all_choices = args_list
     inferencer = create_inferencer(args.model_name_or_path)
     if args.model_name_or_path in ['gemini_official', 'reka']:
         inferencer.load_model()
     question = row['question']
-    options = row['option']
+    
+    ## accomodate the new format of options. 
+    if 'option' in row:
+        options = row['option']
+    elif 'options' in row:
+        options = build_option_string_from_options(row['options'])
+    else:
+        raise ValueError("No options found in the row.")
+    
     audio_transcript = f"Audio Content: {row['audio content']}" if args.audio_transcript else ""
     image_caption = f"Image Content: {row['image content']}" if args.image_caption else ""
     
     prompt = create_prompt(args, question, options, audio_transcript, image_caption) 
+    print(f"Constructed prompt for index {index}:\n{prompt}\n")  # Log the constructed prompt
     
     response = None
     image_path = row['image_path']
@@ -146,7 +162,8 @@ if __name__=='__main__':
     
     p = args.input_file  
     tmp_path = f'{args.output_file}.temp_result.pickle'
-    df = pd.read_excel(p)
+    # df = pd.read_excel(p)
+    df = pd.read_json("dataset/batch-5_1142_20240817.jsonl", lines=True)
     df['image_path'] = df['image_path'].apply(lambda x: f'mm_data/image/{x}') 
     df['audio_path'] = df['audio_path'].apply(lambda x: f'mm_data/audio/{x}')    
     processed_indices = load_existing_outputs(args.output_file)  # Load existing results
@@ -163,11 +180,21 @@ if __name__=='__main__':
     # Prepare for multiprocessing
     args_list = []
     for index in range(df.shape[0]):
-        options = df.loc[index, 'option']
-        all_options = split_string_by_options(options)
+        ## if has option column, then split options, otherwise use all_choices as options
+        print(f"df.columns: {df.columns}")
+        
+        if 'options' not in df.columns:
+            options = df.loc[index, 'option']
+            all_options = split_string_by_options(options)
+        elif 'options' in df.columns:
+            all_options = df.loc[index, 'options']
+        else:
+            raise ValueError("No options found in the dataframe.")
+
         if index not in processed_indices:  # Check if the index has already been processed
             index2ans = {}
             for j in range(len(all_choices)):
+                ## remove the prefix "A. " in options, and strip the space
                index2ans[all_choices[j]] = all_options[j].replace(f"{all_choices[j]}.", "").strip()
             args_list.append((df.loc[index], index, args, index2ans, all_choices))
 

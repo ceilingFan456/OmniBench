@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export LD_LIBRARY_PATH=/home/t-qimhuang/miniconda3/envs/omnibench/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/home/t-qimhuang/miniconda3/envs/omnibench/lib/python3.11/site-packages/nvidia/npp/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/t-qimhuang/miniconda3/envs/omnibench_py310/lib/python3.10/site-packages/nvidia/cuda_nvrtc/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/t-qimhuang/miniconda3/envs/omnibench_py310/lib/python3.10/site-packages/nvidia/npp/lib:$LD_LIBRARY_PATH
 
 
 
