@@ -12,7 +12,8 @@ import sys
 print(sys.path[0])
 
 from inference.models.closed_source_model import GPT4oInferencer, Claude35Inferencer, GPT4VInference, \
-            Gemini15ProInference, GPT4TurboInference, GPT4oMiniInference, GPT35turboInference, GPT4o_0806_Inferencer, GPT4TurboVisionInference, RekaInferencer
+            Gemini15ProInference, GPT4TurboInference, GPT4oMiniInference, GPT35turboInference, GPT4o_0806_Inferencer, GPT4TurboVisionInference, RekaInferencer, \
+            Phi4MultimodalLocalInference
 from inference.answer_parsing import parse_multi_choice_response
 from multiprocessing import Pool
 
@@ -54,6 +55,7 @@ def create_inferencer(model_name):
         'gpt4turbovision': GPT4TurboVisionInference,
         "reka": RekaInferencer,
         # Add more model inferencer mappings here
+        "phi4_local": Phi4MultimodalLocalInference,
     }
     return inferencer_classes[model_name]()
 
@@ -107,7 +109,7 @@ def process_row(args_list):
     audio_path = row['audio_path']
 
 
-    if args.model_name_or_path not in ["gemini_15_pro", "reka"]:
+    if args.model_name_or_path not in ["gemini_15_pro", "reka", "phi4_local"]:
         if args.no_image and not args.image_caption:
             response = inferencer.infer('', prompt, 'Null', 0)
         else:
@@ -123,7 +125,14 @@ def process_row(args_list):
         return None
     
     parsed_response = parse_multi_choice_response(response, all_choices, index2ans)
-    correct_answer = parse_multi_choice_response(row['correct answer'], all_choices, index2ans)
+    correct_option = None
+    if 'correct answer' in row:
+        correct_option = row['correct answer']
+    elif 'answer' in row:
+        correct_option = row['answer']
+    else:
+        raise ValueError("No correct answer found in the row.")
+    correct_answer = parse_multi_choice_response(correct_option, all_choices, index2ans)
 
     results_dict = {
         "index": index,
@@ -146,7 +155,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-name-or-path", choices=['', 'gpt4o', 'claude35', 
                                                  'gpt4v', 'gemini_15_pro', 
-                                                 'gpt4omini', 'gpt4o0806', 'gpt4turbovision', "reka"], type=str, default="gpt4turbovision")
+                                                 'gpt4omini', 'gpt4o0806', 'gpt4turbovision', "reka", "phi4_local"], type=str, default="gpt4turbovision")
     parser.add_argument("--no-image", action="store_true")
     parser.add_argument("--no-audio", action="store_true")
     parser.add_argument("--audio-transcript", action="store_true")
@@ -199,7 +208,7 @@ if __name__=='__main__':
             args_list.append((df.loc[index], index, args, index2ans, all_choices))
 
 
-    with Pool(processes=12) as pool:  # You can adjust the number of processes as needed
+    with Pool(processes=1) as pool:  # You can adjust the number of processes as needed
         results = list(tqdm(pool.imap(process_row, args_list), total=len(args_list)))
 
     # Calculate accuracy

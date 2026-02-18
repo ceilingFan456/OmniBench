@@ -38,13 +38,17 @@ def parse_multi_choice_response(response, all_choices, index2ans, default_answer
                 candidates.append(choice)
 
     # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
-    if len(candidates) == 0 and len(response.split()) > 5:
+    if len(candidates) == 0 and len(response.split()) > 2: ## changed to 2 to fix index 12 problem. 
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
                 candidates.append(index)
                 index_ans = False  # it's content ans.
 
     if len(candidates) == 0:  # still not get answer, randomly choose one.
+        print(f"reponse: {response}")
+        print(f"all choices: {all_choices}")
+        print(f"index2ans: {index2ans}")
+        raise ValueError(f"Cannot parse the answer from the response: {response}. Please check the format of the response.")
         if default_answer is None:
             pred_index = random.choice(all_choices)
         else:

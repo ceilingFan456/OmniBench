@@ -4,13 +4,13 @@ from PIL import Image
 from abc import ABC, abstractmethod
 from openai import OpenAI
 import base64
-from PIL import Image
 import io
 import google.generativeai as genai
-from PIL import Image
 # from reka import ChatMessage
 # from reka.client import Reka
 
+import soundfile as sf
+from transformers import AutoModelForCausalLM, AutoProcessor, GenerationConfig
 
 
 class APIInferencer(ABC):
@@ -242,3 +242,89 @@ class RekaInferencer(APIInferencer):
         """Cleanup the client if necessary."""
         if self.client:
             del self.client
+
+
+
+
+
+class Phi4MultimodalLocalInference(BaseInferencer):
+    def __init__(self):
+        super().__init__('Phi-4-multimodal-instruct')
+        self.loaded = False
+        self.load_model()
+        
+    def load_model(self):
+        if self.loaded:
+            return
+        
+        self.loaded = True
+        model_path = "microsoft/Phi-4-multimodal-instruct"
+
+        self.processor = AutoProcessor.from_pretrained(
+            model_path,
+            trust_remote_code=True
+        )
+
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            device_map="cuda",
+            torch_dtype="auto",
+            trust_remote_code=True,
+            _attn_implementation="flash_attention_2",  
+        ).cuda()
+
+        self.generation_config = GenerationConfig.from_pretrained(model_path)
+
+        # Phi-4 chat tokens
+        self.user_token = "<|user|>"
+        self.assistant_token = "<|assistant|>"
+        self.end_token = "<|end|>"
+
+    def infer(self, system_prompt: str, prompt: str, image_path: str = None, audio_file_path: str = None, temperature: float = 0.0) -> str:
+        print(f"Received prompt: {prompt}")
+        print(f"Image path: {image_path}")
+        print(f"Audio file path: {audio_file_path}")
+
+        # Build multimodal token prefix
+        mm_tokens = ""
+
+        images = None
+        audios = None
+
+        if image_path:
+            mm_tokens += "<|image_1|>"
+            images = [Image.open(image_path).convert("RGB")]
+
+        if audio_file_path:
+            mm_tokens += "<|audio_1|>"
+            waveform, sr = sf.read(audio_file_path)
+            audios = [(waveform, sr)]
+
+        # Full Phi-4 prompt
+        full_prompt = f"{self.user_token}{mm_tokens}{prompt}{self.end_token}{self.assistant_token}"
+
+        inputs = self.processor(
+            text=full_prompt,
+            images=images,
+            audios=audios,
+            return_tensors="pt",
+        ).to("cuda:0")
+
+        generate_ids = self.model.generate(
+            **inputs,
+            max_new_tokens=512,
+            generation_config=self.generation_config,
+        )
+
+        # Remove prompt tokens
+        generate_ids = generate_ids[:, inputs["input_ids"].shape[1]:]
+
+        response = self.processor.batch_decode(
+            generate_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )[0]
+
+        print(f"Generated response: \n{response}")
+
+        return response

@@ -7,4 +7,4 @@ export LD_LIBRARY_PATH=/home/t-qimhuang/miniconda3/envs/omnibench_py310/lib/pyth
 
 cd /home/t-qimhuang/code/OmniBench
 # python demo_api_call.py --output-file outputs/test_inference_output.json
-python demo_api_call.py --no-audio --output-file outputs/test_inference_output.json
+python demo_api_call.py --model-name-or-path phi4_local --output-file outputs/test_inference_output.json
